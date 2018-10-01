@@ -16,152 +16,129 @@
 using namespace cv;
 using namespace std;
 
-Mat inputImage; //Matrix where the input image will be store (subscribing the message from webcam node)
-vector<int> markerIds;  //Vector to store the marker Ids
+Mat inputImage;
+vector<int> markerIds;
 vector<vector<Point2f> > markerCorners, rejectedCandidates;
-//markerCorners : Vecter to store the coordinates of marker corners
-//rejectedCandidates : Vector to store the coordinates of marker corners that are considered as false
-vector<Point2f> innerMarkerCorners; //Vector to store the coordinates of inner marker corners
+vector<Point2f> innerMarkerCorners;
 vector<Point2f> outImageCorners;
-//Vector to store the coordinates of output image corners ((0,0), (255,0), (255,255), (0,255) for a 256x256 size image)
 
-Ptr<aruco::Dictionary> dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250); //Load AruCo dictionary
+Ptr<aruco::Dictionary> dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
+Mat image_1;
+Mat image_2;
 
-Mat image_1;    //Matrix where the animal image will be wraped for marker 1,2,3,4
-Mat image_2;    //Matrix where the animal image will be wraped for marker 5,6,7,8
+int b_image1;
+int b_image2;
 
-int b_image1;   //Integer acting as boolean to determine whether image 1 is available or not
-int b_image2;   //Integer acting as boolean to determine whether image 2 is available or not
+ros::Publisher input_status_pub;
 
-ros::Publisher input_status_pub;    //Publisher to publish the message
-
-sensor_msgs::ImagePtr pub_msg1;     //Message to publish image 1
-sensor_msgs::ImagePtr pub_msg2;     //Message to publish image 2
-
-readmarker::markermsg cropped_img_msg; //Message to be published containing the images, and booleans
-
-void Initialization() //Initialization function
+readmarker::markermsg cropped_img_msg;
+void Initialization()
 {
-  // Corner points of 1st 2nd 3rd 4th of 256X256 square
-  //   (0,0)1┌────┐2(255,0)
-  //         │    │
-  // (0,255)4└────┘3(255,255)
-  outImageCorners.resize(4);  //Resize the vector into size of 4
-  outImageCorners[0] = cvPoint(0.0, 0.0); //First vector element : (0,0)
-  outImageCorners[1] = cvPoint(255.0, 0.0); //Second vector element : (255,0)
-  outImageCorners[2] = cvPoint(255.0, 255.0); //Third vector element : (255,255)
-  outImageCorners[3] = cvPoint(0.0, 255.0); //Forth vector element : (0,255)
-  b_image1 = 1; //Initial setting : Image 1 is available
-  b_image2 = 1; //Initial setting : Image 2 is available
+  outImageCorners.resize(4);
+  outImageCorners[0] = cvPoint(0.0, 0.0);
+  outImageCorners[1] = cvPoint(255.0, 0.0);
+  outImageCorners[2] = cvPoint(255.0, 255.0);
+  outImageCorners[3] = cvPoint(0.0, 255.0);
+  b_image1 = 1;
+  b_image2 = 1;
 }
 
-void imageCallback(const sensor_msgs::ImageConstPtr& msg) //Function which will run when the message "msg" from webcam node is subscribed
+void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-  b_image1=1; //Let image 1 is available
-  b_image2=1; //Let image 1 is available
-  cv_bridge::CvImagePtr cv_ptr; // Image pointer of incoming webcam image (CvImage)
-  cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8); //Convert the image message to an OpenCV compatible CvImage
-  cv_ptr->image.copyTo(inputImage); //Generate the matrix inputImage by copying the incoming image at cv_ptr
+  b_image1=1;
+  b_image2=1;
+  cv_bridge::CvImagePtr cv_ptr;
+  cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+  cv_ptr->image.copyTo(inputImage);
 
-  aruco::detectMarkers(inputImage, dictionary, markerCorners, markerIds); //Detect AruCo markers within the image "inputImage"
+  aruco::detectMarkers(inputImage, dictionary, markerCorners, markerIds);
 
-  Mat outputImage;  //Matrix where the detected markers will be shown in inputImage
-  inputImage.copyTo(outputImage); //Copy the inputImage to outputImage. The markers will be drawn afterwards
-  image_1 = Mat(256,256, CV_8UC3, Scalar(255,255,255)); //initialize image_1 to a white 256x256 image
-  image_2 = Mat(256,256, CV_8UC3, Scalar(255,255,255)); //initialize image_1 to a white 256x256 image
+  Mat outputImage;
+  inputImage.copyTo(outputImage);
+  image_1 = Mat(256,256, CV_8UC3, Scalar(255,255,255));
+  image_2 = Mat(256,256, CV_8UC3, Scalar(255,255,255));
 
-  if (markerIds.size() > 0) //If there is any marker detected
+  if (markerIds.size() > 0)
   {
-      aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds); //Draw the markers on the outputImage
+      aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds);
 
       vector<int> indice;
-      //Vector to store the location of markerIds in consecutive manner
-      //i.e if markerIds = [3 2 4 1]
-      //indices = [4 2 1 3]
-      indice.resize(8); //Resize the vector into size of 8 (since the maximum number of markers is 8)
+      indice.resize(8);
 
-      for(int i=0;i<4;i++)  //Process to find markers 1 through 4
+      for(int i=0;i<4;i++)
       {
-        if(find(markerIds.begin(), markerIds.end(), i+1)!=markerIds.end())  //If there exist marker with index i+1
+        if(find(markerIds.begin(), markerIds.end(), i+1)!=markerIds.end())
         {
-          indice[i]= distance(markerIds.begin(), find(markerIds.begin(), markerIds.end(), i+1)); //indice[i] = location of element 'i+1' in vector markerIds
+          indice[i]= distance(markerIds.begin(), find(markerIds.begin(), markerIds.end(), i+1));
         }
-        else  //If there are missing markers from 1 through 4, the image is not ready
-          b_image1 = b_image1*0;  //Image 1 is not ready
+        else
+          b_image1 = b_image1*0;
       }
-      for(int i=4;i<8;i++)  //Process to find markers 5 through 8
+      for(int i=4;i<8;i++)
       {
-        if(find(markerIds.begin(), markerIds.end(), i+1)!=markerIds.end())  //If there exist marker with index i+1
+        if(find(markerIds.begin(), markerIds.end(), i+1)!=markerIds.end())
         {
-          indice[i]= distance(markerIds.begin(), find(markerIds.begin(), markerIds.end(), i+1));  //indice[i] = location of element 'i+1' in vector markerIds
+          indice[i]= distance(markerIds.begin(), find(markerIds.begin(), markerIds.end(), i+1));
         }
-        else  //If there are missing markers from 5 through 8, the image is not ready
-          b_image2 = b_image2*0;  //Image 2 is not ready
+        else
+          b_image2 = b_image2*0;
       }
 
-      if(b_image1==1) //If image 1 is ready
+      if(b_image1==1)
       {
-        //Configuration : point number
-        //2┌────┐3
-        // │    │
-        //1└────┘0
-        innerMarkerCorners.resize(4); //resize the innerMarkerCorners into size of 4
+
+        innerMarkerCorners.resize(4);
         innerMarkerCorners[0] = markerCorners[indice[0]][2];
         innerMarkerCorners[1] = markerCorners[indice[1]][3];
         innerMarkerCorners[2] = markerCorners[indice[2]][0];
-        innerMarkerCorners[3] = markerCorners[indice[3]][1];  //Allocate the inner marker corner coordinates to corresponding coordinates
+        innerMarkerCorners[3] = markerCorners[indice[3]][1];
         Mat H1 = findHomography(innerMarkerCorners,outImageCorners,0);
-        //Find the transformation matrix (homography) that transformate the innerMarkerCorners coordinates to outImageCorners coordinates
-        warpPerspective(inputImage, image_1, H1, Size(255, 255)); //Warp the inputImage to image_1 using the homography : The rest of the image will be cut out
+
+        warpPerspective(inputImage, image_1, H1, Size(255, 255));
 
       }
       if(b_image2==1)
       {
-        innerMarkerCorners.resize(4); //resize the innerMarkerCorners into size of 4 : This also acts as initialization process of the vector
+        innerMarkerCorners.resize(4);
         innerMarkerCorners[0] = markerCorners[indice[4]][2];
         innerMarkerCorners[1] = markerCorners[indice[5]][3];
         innerMarkerCorners[2] = markerCorners[indice[6]][0];
-        innerMarkerCorners[3] = markerCorners[indice[7]][1];  //Allocate the inner marker corner coordinates to corresponding coordinates
+        innerMarkerCorners[3] = markerCorners[indice[7]][1];
         Mat H2 = findHomography(innerMarkerCorners,outImageCorners,0);
-        //Find the transformation matrix (homography) that transformate the innerMarkerCorners coordinates to outImageCorners coordinates
-        warpPerspective(inputImage, image_2, H2, Size(255, 255)); //Warp the inputImage to image_2 using the homography : The rest of the image will be cut out
+        warpPerspective(inputImage, image_2, H2, Size(255, 255));
       }
   }
-  else  //If there is no marker detected
+  else
   {
-    b_image1 = 0; //Image 1 is unavailable
-    b_image2 = 0; //Image 2 is unavailable
+    b_image1 = 0;
+    b_image2 = 0;
   }
-  pub_msg1 = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image_1).toImageMsg();  //Convert the OpenCV image image_1 to message
-  pub_msg2 = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image_2).toImageMsg();  //Convert the OpenCV image image_2 to message
-  cropped_img_msg.image1_available = b_image1;  //Set the int message image1_available as b_image1
-  cropped_img_msg.image2_available = b_image2;  //Set the int message image2_available as b_image2
-  cropped_img_msg.image1 = *pub_msg1; //Set the image message image1 as pub_msg1
-  cropped_img_msg.image2 = *pub_msg2; //Set the image message image2 as pub_msg2
-  imencode(".jpg", image_1, cropped_img_msg.cimage1.data);  //Set the compressed image message cimage1 as image_1
-  imencode(".jpg", image_2, cropped_img_msg.cimage2.data);  //Set the compressed image message cimage2 as image_2
-  input_status_pub.publish(cropped_img_msg);  //Publish the message
 
-  Mat showImg = Mat::zeros(Size(256,512),CV_8UC3);  //Matrix to contain images to show the wrapped images
-  image_1.copyTo(showImg(Rect(0,0,image_1.cols, image_1.rows)));  //Copy image_1 to upper side of showImg
-  image_2.copyTo(showImg(Rect(0,image_1.rows,image_2.cols,image_2.rows))); //Copy image_1 to lower side of showImg
+  cropped_img_msg.image1_available = b_image1;
+  cropped_img_msg.image2_available = b_image2;
 
-  imshow("image", showImg); //Show showImg in the window named "image"
-  imshow("out", outputImage); //Show outputImage in the window named "out"
+  imencode(".jpg", image_1, cropped_img_msg.cimage1.data);
+  imencode(".jpg", image_2, cropped_img_msg.cimage2.data);
+  input_status_pub.publish(cropped_img_msg);
+  Mat showImg = Mat::zeros(Size(256,512),CV_8UC3);
+  image_1.copyTo(showImg(Rect(0,0,image_1.cols, image_1.rows)));
+  image_2.copyTo(showImg(Rect(0,image_1.rows,image_2.cols,image_2.rows)));
 
-  moveWindow("image", outputImage.cols+50,20);  //Set the window location as (width of outputImage+50, 20)
-  moveWindow("out", 50,20); //Set the window location as (width of outputImage+50, 20)
-  cvWaitKey(1); //Wait 1ms
+  imshow("image", showImg);
+  imshow("out", outputImage);
+
+  moveWindow("image", outputImage.cols+50,20);
+  moveWindow("out", 50,20);
+  cvWaitKey(1);
 }
 
 int main(int argc, char** argv)
 {
-  Initialization(); //Initialize the parameters
-  ros::init(argc, argv, "marker_reader"); //Initialize the node "marker_reader"
-  ros::NodeHandle nh; //Set the node handle as nh
+  Initialization();
+  ros::init(argc, argv, "marker_reader");
+  ros::NodeHandle nh;
   input_status_pub = nh.advertise<readmarker::markermsg>("cropped_img", 100);
-  //Declare publisher 'input_status_pub' using the message file 'marekermsg' in the package 'readmarker' with topic name 'cropped_img' with queue size 100
   image_transport::ImageTransport it(nh); //Set the image transport it using the node handle nh
-  image_transport::Subscriber sub = it.subscribe("camera/image", 1, imageCallback); //if 'it' subscribes the message 'camera/image', run imageCallback function
-  ros::spin(); //Spin the process
+  image_transport::Subscriber sub = it.subscribe("camera/image", 1, imageCallback);
+  ros::spin();
 }
