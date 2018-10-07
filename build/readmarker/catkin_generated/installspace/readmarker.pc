@@ -1,0 +1,8 @@
+prefix=/home/dongha/me491_ros/install
+
+Name: readmarker
+Description: Description of readmarker
+Version: 0.0.0
+Cflags: -I/home/dongha/me491_ros/install/include
+Libs: -L/home/dongha/me491_ros/install/lib -lreadmarker
+Requires: std_msgs roscpp

@@ -1,0 +1,8 @@
+prefix=/home/dongha/me491_ros/install
+
+Name: webcam
+Description: Description of webcam
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/dongha/me491_ros/install/lib 
+Requires: 

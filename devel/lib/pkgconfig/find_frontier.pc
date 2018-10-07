@@ -1,0 +1,8 @@
+prefix=/home/dongha/me491_ros/devel
+
+Name: find_frontier
+Description: Description of find_frontier
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/dongha/me491_ros/devel/lib 
+Requires: 

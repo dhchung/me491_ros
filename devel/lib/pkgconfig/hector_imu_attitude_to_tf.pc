@@ -1,0 +1,8 @@
+prefix=/home/dongha/me491_ros/devel
+
+Name: hector_imu_attitude_to_tf
+Description: Description of hector_imu_attitude_to_tf
+Version: 0.3.5
+Cflags: 
+Libs: -L/home/dongha/me491_ros/devel/lib 
+Requires: 
