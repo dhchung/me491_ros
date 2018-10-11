@@ -5,7 +5,6 @@
 
   <arg name="base_global_planner" default="navfn/NavfnROS"/>
   <arg name="base_local_planner" default="dwa_local_planner/DWAPlannerROS"/>
-  <!-- <arg name="base_local_planner" default="base_local_planner/TrajectoryPlannerROS"/> -->
 
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
 
@@ -16,8 +15,6 @@
     <!-- observation sources located in costmap_common.yaml -->
     <rosparam file="$(find find_frontier)/config/costmap_common.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find find_frontier)/config/costmap_common.yaml" command="load" ns="local_costmap" />
-    <param name="global_costmap/width" value="35.0" if="$(arg no_static_map)"/>
-    <param name="global_costmap/height" value="35.0" if="$(arg no_static_map)"/>
 
     <!-- local costmap, needs size -->
     <rosparam file="$(find find_frontier)/config/costmap_local.yaml" command="load" ns="local_costmap" />
@@ -27,3 +24,4 @@
   </node>
 
 </launch>
+
