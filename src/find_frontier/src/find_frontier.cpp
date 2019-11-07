@@ -123,7 +123,6 @@ void mapConvert(const nav_msgs::OccupancyGrid::ConstPtr& msg){
     ROS_INFO("Frontier Detected!");
     ROS_INFO("Frontier Size : %d", int(FrontierList.size()));
     //Frontier Detection is Done
-    //Now, let's cluster the fucking frontiers
     vector<vector<int> > FrontierList_temp;
     FrontierList_temp.resize(2);
     for(int i=0;i<FrontierList.size();i++)
